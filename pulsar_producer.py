@@ -1,5 +1,4 @@
 import csv
-import random
 import time
 
 import pulsar
@@ -12,25 +11,19 @@ PULSAR_SERVICE_URL = "pulsar://localhost:6650"
 ADMIN_URL = "http://localhost:8080"
 TOPIC_NAME = "persistent://public/default/bitcoin-tweets"
 CSV_FILE_PATH = "mbsa.csv"
-NUM_PARTITIONS = 10  # Number of partitions for the topic
 
-# Create a partitioned topic
 def create_partitioned_topic(admin_url, topic_name, num_partitions):
     admin_client = PulsarAdmin(host="localhost", port=8080)
     admin_client.persistent_topics().create_partitioned_topic(topic_name, num_partitions)
 
 
-# Callback function to handle success or failure of sending a message
 def send_callback(message_id, exception):
-    if exception:
-        pass
-    else:
-        pass
+    pass
 
 # Send message to Pulsar asynchronously
-def send_message_to_pulsar_async(producer, message, partition_key):
+def send_message_to_pulsar_async(producer, message):
     try:
-        producer.send_async(message.encode('utf-8'), send_callback, partition_key=partition_key)
+        producer.send_async(message.encode('utf-8'), send_callback)
     except Exception as e:
         print(f"Failed to publish message: {e}")
 
@@ -42,9 +35,9 @@ def produce_messages():
         client = pulsar.Client(PULSAR_SERVICE_URL)
         producer = client.create_producer(
             TOPIC_NAME,
-            max_pending_messages=1000000,
+            max_pending_messages=1,
             block_if_queue_full=True,
-            batching_enabled=True,
+            batching_enabled=False
         )
         print("Connected to Pulsar.")
 
@@ -62,9 +55,7 @@ def produce_messages():
                     "Date": row["Date"]
                 })
 
-                # Use the Date field as the partition key
-                partition_key = random.randint(0, 9)
-                send_message_to_pulsar_async(producer, message, str(partition_key))
+                send_message_to_pulsar_async(producer, message)
 
         finish = time.time()
         print(f"Time taken to publish messages: {finish - start:.2f} seconds")
@@ -74,14 +65,10 @@ def produce_messages():
     except Exception as e:
         print(f"Error occurred: {e}")
     finally:
-        # Close the Pulsar client
         client.close()
 
-# Main function
 def main():
     try:
-        # Step 1: Create a partitioned topic
-
         # Step 2: Produce messages to Pulsar
         produce_messages()
     except Exception as e:
